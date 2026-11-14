@@ -1,0 +1,24 @@
+# Python and editor files
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.vscode/
+.idea/
+
+# Local credentials
+.env
+.env.*
+
+# Phone screenshots and dataset records
+/dataset/images/
+/dataset/labels/
+/dataset_v2/images/
+/dataset_v2/labels/
+/dataset_v2/capture_manifest.jsonl
+/detected.png
+/test_screen.png
+
+# Training image previews and local cache
+/runs/**/*batch*.jpg
+*.cache

@@ -1,0 +1,5 @@
+path: .
+train: images/train
+val: images/val
+nc: 2
+names: [input_box, search_icon]
