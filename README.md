@@ -1,66 +1,47 @@
 # gui_yolo_model
 
-手机 GUI 目标检测项目：使用 Ultralytics YOLO 检测 Android 截图中的输入框，并提供截图采集、标注、数据划分、训练与推理脚本。
+通用手机 GUI 检测项目，目标类别为 `input_box`（0）和 `search_icon`（1）。`dataset_v2/` 是当前数据集；原单类别 `dataset/` 已移除。旧单类别权重仍保留，可用于输入框预标注，但**不能识别搜索图标**。
 
-## 环境与安装
+## 安装
 
-建议 Python 3.10 或更高版本。连接手机采集或推理需要安装 Android Platform Tools，将 `adb` 加入 PATH，并在手机上启用 USB 调试、完成设备授权。训练脚本默认使用 CUDA GPU（`device=0`）；使用 CPU 时请将其改为 `device="cpu"`。
-
-```bash
-git clone https://github.com/peter-lgxj/gui_yolo_model.git
-cd gui_yolo_model
+```powershell
 pip install -r requirements.txt
 ```
 
-标注工具使用 Tkinter；若所用 Python 未附带 Tkinter，需另外安装。
+采集手机截图需要 Android Platform Tools、USB 调试和设备授权。标注界面还需要 Tkinter。
 
-## 原版输入框检测
+## 数据状态
 
-从项目根目录运行：
+当前 v2 数据包含 348 张截图和对应的 348 份标签，类别 0 有 280 个框，类别 1 有 6 个框。目前仅 1 张标记为人工复核，其他输入框标签主要来自旧模型预标注。**数据仍需逐张复核并补充搜索图标标注；上传不代表双类别模型已训练完成。** 详细规则见 [DATASET_V2.md](DATASET_V2.md)。
 
-```bash
-# 采集手机截图
-python collect_screenshots.py
+`dataset_v2/images/raw/`、`dataset_v2/labels/raw/` 和 `dataset_v2/labels/reviewed/` 是源数据。`images/train|val` 与 `labels/train|val` 由划分脚本生成，不提交到 Git。
 
-# 标注输入框
-python annotate.py
+组员启动标注的命令是 `python annotate_v2.py`；分段标注可用 `python annotate_v2.py --start 1 --end 116`。交付文件及完整分工示例见 [DATASET_V2.md](DATASET_V2.md#组员分工与交付)。
 
-# 按 8:2 划分已标注数据
+## 工作流
+
+```powershell
+# 连接手机采集，或将现有 PNG/JPG 截图放到 dataset_v2/images/raw/
+python capture_v2.py
+
+# 用旧的单类别权重补充输入框候选，不覆盖人工复核标签
+python prelabel_input_boxes.py
+
+# 人工检查输入框，补充搜索图标；允许无目标页面保存空标签
+python annotate_v2.py
+
+# 合并组员标签后检查图片、类别编号与坐标
+python validate_dataset_v2.py
+
+# 生成固定种子的训练/验证划分，保证有足够样本时两边都有搜索图标
 python split_dataset.py
 
-# 训练单类别检测器
+# 训练双类别模型（需 CUDA GPU；CPU 用户修改 train.py 中 device）
 python train.py
-
-# 连接手机，截图并使用现有权重检测
-python test_detector.py
 ```
 
-原始图片和标签分别放在 `dataset/images/all/` 与 `dataset/labels/all/`。类别为 `input_box`（编号 0），数据配置见 `dataset/data.yaml`。数据集截图和标签未上传，需要自行准备。
+`train.py` 读取 `dataset_v2/data.yaml`。划分脚本使用原始图像和标签，重新运行会重建生成的 train/val 文件。当前只有 6 个搜索图标框，训练结果不宜当作可用的通用搜索检测器。
 
-## 模型权重
+## 现有权重
 
-- `yolo11n.pt`：训练脚本使用的初始权重。
-- `yolo26n.pt`：目录中保留的另一份初始权重。
-- `runs/detect/runs/input_box5/weights/best.pt`：已有的输入框检测权重，推理脚本默认使用它。
-- `runs/detect/runs/input_box5/weights/last.pt`：该轮训练的最后一个检查点。
-
-训练指标、曲线及参数文件保留在 `runs/`。包含原始手机截图的训练预览图未上传。训练后的输出目录以 Ultralytics 实际运行日志为准。
-
-## v2 数据采集与标注
-
-`capture_v2.py`、`annotate_v2.py` 和 `dataset_v2/data.yaml` 用于两个类别：`input_box`（0）和 `search_icon`（1）。详细规则见 [DATASET_V2.md](DATASET_V2.md)。现有训练权重来自原版单类别任务，不能据此视为已训练的 v2 双类别模型。
-
-```bash
-python capture_v2.py
-python annotate_v2.py
-```
-
-原版 `train.py` 默认读取 `dataset/data.yaml`；训练 v2 需要先准备并划分数据，再修改相应数据配置路径。
-
-## 与 Phone Agent 配合
-
-将 `runs/detect/runs/input_box5/weights/best.pt` 复制到 Phone Agent 项目的 `models/input_box.pt`，供其输入框检测模块使用。
-
-## 验证范围
-
-上传前检查 Python 文件语法和上传文件清单，未重新训练模型或连接真实手机进行推理测试。
+`runs/detect/runs/input_box5/weights/best.pt` 是原单类别 `input_box` 模型。`test_detector.py` 用它对当前手机截图做输入框推理；`yolo11n.pt` 和 `yolo26n.pt` 是保留的初始权重。真正接入 Phone Agent 的搜索图标检测需等待 v2 标注、训练和验证完成。

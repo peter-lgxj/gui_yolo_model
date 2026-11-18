@@ -10,12 +10,12 @@ venv/
 .env
 .env.*
 
-# Phone screenshots and dataset records
-/dataset/images/
-/dataset/labels/
-/dataset_v2/images/
-/dataset_v2/labels/
-/dataset_v2/capture_manifest.jsonl
+# Legacy dataset and generated v2 splits
+/dataset/
+/dataset_v2/images/train/
+/dataset_v2/images/val/
+/dataset_v2/labels/train/
+/dataset_v2/labels/val/
 /detected.png
 /test_screen.png
 
